@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net7.0;net6.0;netstandard2.0</TargetFrameworks>
+    <AssemblyName>Iwate.Commander</AssemblyName>
+    <Authors>iwate</Authors>
+    <PackageProjectUrl>https://github.com/iwate/commander</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/iwate/commander</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Description>A command queuing library for Azure Functions</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
+    <PackageReference Include="Ulid" Version="1.2.6" />
+  </ItemGroup>
+
+</Project>
