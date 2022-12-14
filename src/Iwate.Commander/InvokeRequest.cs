@@ -4,7 +4,7 @@ namespace Iwate.Commander
 {
     public class InvokeRequest
     {
-        public InvokeId Id { get; set; }
+        public string Id { get; set; }
 
         public string Partition { get; set; }
 

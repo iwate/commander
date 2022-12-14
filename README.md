@@ -45,7 +45,7 @@ public class Program
             Arg2 = 2,
         })))
         {
-            id = await commander.EnqueueAsync(null, nameof(TestCommand), payload, CancellationToken.None);
+            id = await commander.EnqueueAsync(null, null, nameof(TestCommand), payload, CancellationToken.None);
         }
 
         var state = await commander.GetStateAsync(id, CancellationToken.None);

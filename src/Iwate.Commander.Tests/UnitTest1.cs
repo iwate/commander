@@ -34,14 +34,14 @@ public class UnitTest1
 
         var commander = provider.GetRequiredService<Commander>();
 
-        InvokeId id;
+        string id;
         using (var payload = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(new 
         { 
             Arg1 = 1,
             Arg2 = 2,
         })))
         {
-            id = await commander.EnqueueAsync(null, nameof(TestCommand), payload, CancellationToken.None);
+            id = await commander.EnqueueAsync(null, null, nameof(TestCommand), payload, CancellationToken.None);
         }
 
         var state = await commander.GetStateAsync(id, CancellationToken.None);

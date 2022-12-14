@@ -45,12 +45,12 @@ namespace Iwate.Commander
             return $"{GetQueueDirPath(request.Partition)}{request.Id}@{request.Command}";
         }
 
-        private string GetStatePath(InvokeId id)
+        private string GetStatePath(string id)
         {
             return $"{_stateDir}/{id}.json";
         }
 
-        public async Task<InvokeId> EnqueueAsync(string partition, string command, Stream payload, CancellationToken cancellationToken)
+        public async Task<string> EnqueueAsync(string partition, string user, string command, Stream payload, CancellationToken cancellationToken)
         {
             if (command == null)
                 throw new ArgumentNullException(nameof(command));
@@ -60,7 +60,7 @@ namespace Iwate.Commander
 
             var request = new InvokeRequest
             {
-                Id = InvokeId.NewInvokeId(),
+                Id = Ulid.NewUlid().ToString(),
                 Partition = partition,
                 Command = command,
                 Payload = payload,
@@ -70,6 +70,9 @@ namespace Iwate.Commander
             using (var stream = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(new TInvokeState
             {
                 Id = request.Id,
+                Partition = partition,
+                Command = command,
+                InvokedBy = user,
                 Status = InvokeStatus.Queuing,
             })))
             {
@@ -97,7 +100,7 @@ namespace Iwate.Commander
                     return new InvokeRequest
                     {
                         Partition = partition,
-                        Id = InvokeId.Parse(name[0]),
+                        Id = name[0],
                         Command = name[1],
                         Payload = response.Value.Content.ToStream()
                     };
@@ -116,7 +119,7 @@ namespace Iwate.Commander
             }
         }
 
-        public async Task<TInvokeState> GetStateAsync(InvokeId id, CancellationToken cancellationToken)
+        public async Task<TInvokeState> GetStateAsync(string id, CancellationToken cancellationToken)
         {
             var state = _container.GetBlockBlobClient(GetStatePath(id));
 
@@ -152,9 +155,15 @@ namespace Iwate.Commander
             return Task.CompletedTask;
         }
 
-        public Task<InvokeId> EnqueueAsync(string partition, string command, Stream payload, CancellationToken cancellationToken)
+        public Task<string> EnqueueAsync(string partition, string user, string command, Stream payload, CancellationToken cancellationToken)
         {
-            var id = InvokeId.NewInvokeId();
+            if (command == null)
+                throw new ArgumentNullException(nameof(command));
+
+            if (payload == null)
+                throw new ArgumentNullException(nameof(payload));
+
+            var id = Ulid.NewUlid().ToString();
             var key = (id.ToString(), partition, command);
             var stream = new MemoryStream();
             payload.CopyTo(stream);
@@ -168,7 +177,10 @@ namespace Iwate.Commander
             });
             _states.TryAdd(id.ToString(), new TInvokeState 
             { 
-                Id = id, 
+                Id = id,
+                Partition = partition,
+                Command = command,
+                InvokedBy = user,
                 Status = InvokeStatus.Queuing
             });
             return Task.FromResult(id);
@@ -194,7 +206,7 @@ namespace Iwate.Commander
             return Task.CompletedTask;
         }
 
-        public Task<TInvokeState> GetStateAsync(InvokeId id, CancellationToken cancellationToken)
+        public Task<TInvokeState> GetStateAsync(string id, CancellationToken cancellationToken)
         {
             if (_states.TryGetValue(id.ToString(), out var state))
             {

@@ -8,10 +8,10 @@ namespace Iwate.Commander
         where TInvokeState : IInvokeState
     {
         Task InitAsync();
-        Task<InvokeId> EnqueueAsync(string partition, string command, Stream payload, CancellationToken cancellationToken);
+        Task<string> EnqueueAsync(string partition, string user, string command, Stream payload, CancellationToken cancellationToken);
         Task<InvokeRequest> PeekAsync(string partition, CancellationToken cancellationToken);
         Task RemoveAsync(InvokeRequest request, CancellationToken cancellationToken);
-        Task<TInvokeState> GetStateAsync(InvokeId id, CancellationToken cancellationToken);
+        Task<TInvokeState> GetStateAsync(string id, CancellationToken cancellationToken);
         Task SetStateAsync(TInvokeState state, CancellationToken cancellationToken);
     }
 }

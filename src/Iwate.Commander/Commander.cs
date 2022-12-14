@@ -17,8 +17,8 @@ namespace Iwate.Commander
         public Task InitAsync()
             => _storage.InitAsync();
         
-        public Task<InvokeId> EnqueueAsync(string partition, string command, Stream payload, CancellationToken cancellationToken)
-            => _storage.EnqueueAsync(partition, command, payload, cancellationToken);
+        public Task<string> EnqueueAsync(string partition, string user, string command, Stream payload, CancellationToken cancellationToken)
+            => _storage.EnqueueAsync(partition, user, command, payload, cancellationToken);
         
         public Task<InvokeRequest> PeekAsync(string partition, CancellationToken cancellationToken)
             => _storage.PeekAsync(partition, cancellationToken);
@@ -27,7 +27,7 @@ namespace Iwate.Commander
             => _storage.RemoveAsync(request, cancellationToken);
 
 
-        public Task<TInvokeState> GetStateAsync(InvokeId id, CancellationToken cancellationToken)
+        public Task<TInvokeState> GetStateAsync(string id, CancellationToken cancellationToken)
             => _storage.GetStateAsync(id, cancellationToken);
         
         public Task SetStateAsync(TInvokeState state, CancellationToken cancellationToken)
