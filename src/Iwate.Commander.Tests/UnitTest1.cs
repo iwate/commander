@@ -25,8 +25,8 @@ public class UnitTest1
         services.AddCommander(builder =>
         {
             builder
-                .UseAzureBlobCommandStorage()
-                //.UseInMemoryCommandStorage()
+                //.UseAzureBlobCommandStorage()
+                .UseInMemoryCommandStorage()
                 .AddCommand<TestCommand>();
         });
 
