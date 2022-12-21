@@ -13,10 +13,10 @@ public class UnitTest1
     {
         var services = new ServiceCollection();
 
-        //services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        //{
-        //    ["AzureWebJobsStorage"] = "UseDevelopmentStorage=true",
-        //}).Build());
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AzureWebJobsStorage"] = "UseDevelopmentStorage=true",
+        }).Build());
 
         services.AddLogging(builder =>
         {
@@ -25,8 +25,8 @@ public class UnitTest1
         services.AddCommander(builder =>
         {
             builder
-                //.UseAzureBlobCommandStorage()
-                .UseInMemoryCommandStorage()
+                .UseAzureBlobCommandStorage()
+                //.UseInMemoryCommandStorage()
                 .AddCommand<TestCommand>();
         });
 
@@ -34,6 +34,7 @@ public class UnitTest1
 
         var commander = provider.GetRequiredService<Commander>();
 
+        var user = Guid.NewGuid().ToString();
         string id;
         using (var payload = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(new 
         { 
@@ -41,12 +42,14 @@ public class UnitTest1
             Arg2 = 2,
         })))
         {
-            id = await commander.EnqueueAsync(null, null, nameof(TestCommand), payload, CancellationToken.None);
+            id = await commander.EnqueueAsync(null, user, nameof(TestCommand), payload, CancellationToken.None);
         }
 
         var state = await commander.GetStateAsync(id, CancellationToken.None);
 
         var request = await commander.PeekAsync(null, CancellationToken.None);
+
+        Assert.Equal(user, request.InvokedBy);
 
         state.Status = InvokeStatus.Processing;
         

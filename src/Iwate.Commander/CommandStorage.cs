@@ -42,7 +42,7 @@ namespace Iwate.Commander
 
         private string GetQueuePath(InvokeRequest request)
         {
-            return $"{GetQueueDirPath(request.Partition)}{request.Id}@{request.Command}";
+            return $"{GetQueueDirPath(request.Partition)}{request.Id}@{request.Command}@{request.InvokedBy}";
         }
 
         private string GetStatePath(string id)
@@ -63,6 +63,7 @@ namespace Iwate.Commander
                 Id = Ulid.NewUlid().ToString(),
                 Partition = partition,
                 Command = command,
+                InvokedBy = user,
                 Payload = payload,
             };
 
@@ -102,6 +103,7 @@ namespace Iwate.Commander
                         Partition = partition,
                         Id = name[0],
                         Command = name[1],
+                        InvokedBy = name[2],
                         Payload = response.Value.Content.ToStream()
                     };
                 }
@@ -173,6 +175,7 @@ namespace Iwate.Commander
                 Id = id,
                 Partition = partition,
                 Command = command,
+                InvokedBy = user,
                 Payload = stream,
             });
             _states.TryAdd(id.ToString(), new TInvokeState 

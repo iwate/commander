@@ -10,6 +10,8 @@ namespace Iwate.Commander
 
         public string Command { get; set; }
 
+        public string InvokedBy {  get; set; }
+
         public Stream Payload { get; set; }
     }
 }
