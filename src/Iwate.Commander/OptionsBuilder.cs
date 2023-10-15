@@ -21,7 +21,8 @@ namespace Iwate.Commander
             return UseStorage(provider =>
             {
                 var configuration = provider.GetRequiredService<IConfiguration>();
-                return new AzureBlobCommandStorage<TInvokeState>(configuration[connectionStringName], containerName, queueDir, stateDir);
+                var pathResolver = new CommandStoragePathResolver(queueDir, stateDir);
+                return new AzureBlobCommandStorage<TInvokeState>(configuration[connectionStringName], containerName, pathResolver);
             });
         }
 

@@ -4,23 +4,106 @@ using Azure.Storage.Blobs.Specialized;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Iwate.Commander
 {
+    internal class CommandStoragePathResolver : ICommandStoragePathResolver
+    {
+        private const string PARTITION_SEGMENT_NAME_SHARED = "shared";
+        private const string PARTITION_SEGMENT_NAME_PARTITIONED = "partitioned";
+        private readonly string _queueDir;
+        private readonly string _stateDir;
+        public CommandStoragePathResolver(string queueDir, string stateDir)
+        {
+            _queueDir = queueDir;
+            _stateDir = stateDir;
+        }
+
+        public string GetStatePath(string id)
+        {
+            return $"{_stateDir}/{id}.json";
+        }
+
+        public string GetQueueDirPath(string partition)
+        {
+            if (string.IsNullOrEmpty(partition))
+            {
+                return $"{_queueDir}/{PARTITION_SEGMENT_NAME_SHARED}/";
+            }
+            else
+            {
+                return $"{_queueDir}/{PARTITION_SEGMENT_NAME_PARTITIONED}/{partition}/";
+            }
+        }
+
+        public string GetQueuePath(InvokeRequestBase request)
+        {
+            return $"{GetQueueDirPath(request.Partition)}{request.Id}@{request.Command}@{request.InvokedBy}";
+        }
+
+        public bool TryParseQueue(string path, out InvokeRequestBase request)
+        {
+            request = null;
+            if (path == null)
+                throw new ArgumentNullException(nameof(path));
+
+            var segments = path.Split('/');
+
+            if (segments.Length < 3)
+                throw new ArgumentException(nameof(path));
+
+            if (segments[0] != _queueDir)
+                return false;
+
+            var last = segments.Last();
+
+            var idCommandUser = last.Split('@');
+            if (idCommandUser.Length != 3)
+                throw new ArgumentException(nameof(path));
+
+            var partitionSegments = segments.AsSpan(1, segments.Length - 2);
+
+            if (partitionSegments[0] == PARTITION_SEGMENT_NAME_SHARED)
+            {
+                request = new InvokeRequestBase
+                {
+                    Id = idCommandUser[0],
+                    Command = idCommandUser[1],
+                    InvokedBy = idCommandUser[2],
+                    Partition = null,
+                };
+                return true;
+            }
+
+            if (partitionSegments[0] == PARTITION_SEGMENT_NAME_PARTITIONED)
+            {
+                request = new InvokeRequestBase
+                {
+                    Id = idCommandUser[0],
+                    Command = idCommandUser[1],
+                    InvokedBy = idCommandUser[2],
+                    Partition = string.Join("/", partitionSegments.Slice(1).ToArray())
+                };
+                return true;
+            }
+
+            return false;
+        }
+    }
     internal class AzureBlobCommandStorage<TInvokeState> : ICommandStorage<TInvokeState>
         where TInvokeState : IInvokeState, new()
     {
         private readonly BlobContainerClient _container;
-        private readonly string _queueDir;
-        private readonly string _stateDir;
-        public AzureBlobCommandStorage(string connectionString, string containerName, string queueDir, string stateDir) 
+        private readonly ICommandStoragePathResolver _pathResolver;
+
+        public AzureBlobCommandStorage(string connectionString, string containerName, ICommandStoragePathResolver pathResolver) 
         {
             _container = new BlobContainerClient(connectionString, containerName);
-            _queueDir = queueDir;
-            _stateDir = stateDir;
+            _pathResolver = pathResolver;
         }
 
         public async Task InitAsync()
@@ -28,27 +111,7 @@ namespace Iwate.Commander
             await _container.CreateIfNotExistsAsync().ConfigureAwait(false);
         }
 
-        private string GetQueueDirPath(string partition)
-        {
-            if (string.IsNullOrEmpty(partition))
-            {
-                return $"{_queueDir}/shared/";
-            }
-            else
-            {
-                return $"{_queueDir}/partitioned/{partition}/";
-            }
-        }
-
-        private string GetQueuePath(InvokeRequest request)
-        {
-            return $"{GetQueueDirPath(request.Partition)}{request.Id}@{request.Command}@{request.InvokedBy}";
-        }
-
-        private string GetStatePath(string id)
-        {
-            return $"{_stateDir}/{id}.json";
-        }
+        
 
         public async Task<string> EnqueueAsync(string partition, string user, string command, Stream payload, CancellationToken cancellationToken)
         {
@@ -67,7 +130,7 @@ namespace Iwate.Commander
                 Payload = payload,
             };
 
-            var state = _container.GetBlockBlobClient(GetStatePath(request.Id));
+            var state = _container.GetBlockBlobClient(_pathResolver.GetStatePath(request.Id));
             using (var stream = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(new TInvokeState
             {
                 Id = request.Id,
@@ -80,7 +143,7 @@ namespace Iwate.Commander
                 await state.UploadAsync(stream, new BlobUploadOptions { }, cancellationToken);
             }
 
-            var queue = _container.GetBlockBlobClient(GetQueuePath(request));
+            var queue = _container.GetBlockBlobClient(_pathResolver.GetQueuePath(request));
             await queue.UploadAsync(request.Payload, new BlobUploadOptions { }, cancellationToken);
 
             return request.Id;
@@ -88,7 +151,7 @@ namespace Iwate.Commander
 
         public async Task<InvokeRequest> PeekAsync(string partition, CancellationToken cancellationToken)
         {
-            var prefix = GetQueueDirPath(partition);
+            var prefix = _pathResolver.GetQueueDirPath(partition);
             var resultSegment = _container.GetBlobsAsync(prefix: prefix, cancellationToken: cancellationToken).AsPages(default, 1);
             var enumerator = resultSegment.GetAsyncEnumerator();
 
@@ -114,7 +177,7 @@ namespace Iwate.Commander
 
         public async Task RemoveAsync(InvokeRequest request, CancellationToken cancellationToken)
         {
-            var queue = _container.GetBlockBlobClient(GetQueuePath(request));
+            var queue = _container.GetBlockBlobClient(_pathResolver.GetQueuePath(request));
             if (await queue.ExistsAsync(cancellationToken))
             {
                 await queue.DeleteAsync(cancellationToken: cancellationToken);
@@ -123,7 +186,7 @@ namespace Iwate.Commander
 
         public async Task<TInvokeState> GetStateAsync(string id, CancellationToken cancellationToken)
         {
-            var state = _container.GetBlockBlobClient(GetStatePath(id));
+            var state = _container.GetBlockBlobClient(_pathResolver.GetStatePath(id));
 
             if (!await state.ExistsAsync(cancellationToken))
             {
@@ -137,7 +200,7 @@ namespace Iwate.Commander
 
         public async Task SetStateAsync(TInvokeState state, CancellationToken cancellationToken)
         {
-            var result = _container.GetBlockBlobClient(GetStatePath(state.Id));
+            var result = _container.GetBlockBlobClient(_pathResolver.GetStatePath(state.Id));
             using (var stream = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(state)))
             {
                 await result.UploadAsync(stream);

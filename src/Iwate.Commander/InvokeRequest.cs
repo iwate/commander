@@ -2,7 +2,7 @@ using System.IO;
 
 namespace Iwate.Commander
 {
-    public class InvokeRequest
+    public class InvokeRequestBase
     {
         public string Id { get; set; }
 
@@ -10,8 +10,11 @@ namespace Iwate.Commander
 
         public string Command { get; set; }
 
-        public string InvokedBy {  get; set; }
+        public string InvokedBy { get; set; }
+    }
 
+    public class InvokeRequest : InvokeRequestBase
+    {
         public Stream Payload { get; set; }
     }
 }
