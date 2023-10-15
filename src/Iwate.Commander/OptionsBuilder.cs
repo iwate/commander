@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 
 namespace Iwate.Commander
@@ -14,14 +15,12 @@ namespace Iwate.Commander
         }
         public OptionsBuilder<TInvokeState> UseAzureBlobCommandStorage(
             string connectionStringName = "AzureWebJobsStorage", 
-            string containerName = "commands", 
-            string queueDir = "queue", 
-            string stateDir = "state")
+            string containerName = "commands")
         {
             return UseStorage(provider =>
             {
                 var configuration = provider.GetRequiredService<IConfiguration>();
-                var pathResolver = new CommandStoragePathResolver(queueDir, stateDir);
+                var pathResolver = provider.GetRequiredService<ICommandStoragePathResolver>();
                 return new AzureBlobCommandStorage<TInvokeState>(configuration[connectionStringName], containerName, pathResolver);
             });
         }
@@ -57,6 +56,8 @@ namespace Iwate.Commander
             }
             services.AddSingleton(_storageFactory);
             services.AddSingleton<ICommandInvoker, CommandInvoker>();
+
+            services.TryAddSingleton<ICommandStoragePathResolver>(sp => new CommandStoragePathResolver("queue", "state"));
         }
     }
 }
