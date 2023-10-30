@@ -41,7 +41,7 @@ public class PartitionLockMiddleware : IFunctionsWorkerMiddleware
 
             var lockName = _pathResolver.GetLockFileName(trigger?.Partition);
 
-            await using (var @lock = await _lockService.Lock(lockName, CancellationToken.None))
+            await using (var @lock = await _lockService.Lock(lockName, context.CancellationToken))
             {
                 _logger.LogTrace($"PartitionLock invocation '{context.InvocationId}' entered lock");
 
