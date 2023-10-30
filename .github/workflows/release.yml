@@ -22,10 +22,18 @@ jobs:
       working-directory: src
       run: dotnet build -c Release
 
-    - name: Pack package
+    - name: Pack package 1
       working-directory: src/Iwate.Commander
       run: dotnet pack -c Release -p:Version=${{github.event.release.tag_name}} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
+    
+    - name: Pack package 2
+      working-directory: src/Iwate.AzureFunctions.Middlewares.Commander
+      run: dotnet pack -c Release -p:Version=${{github.event.release.tag_name}} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 
-    - name: Publish package to NuGet.org
+    - name: Publish package to NuGet.org 1
       working-directory: src/Iwate.Commander/bin/Release/
+      run: dotnet nuget push *.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_TOKEN }}
+    
+    - name: Publish package to NuGet.org 2
+      working-directory: src/Iwate.AzureFunctions.Middlewares.Commander/bin/Release/
       run: dotnet nuget push *.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_TOKEN }}
