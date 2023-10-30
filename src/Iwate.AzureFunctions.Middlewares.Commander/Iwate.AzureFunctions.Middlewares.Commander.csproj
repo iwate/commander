@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>Iwate.AzureFunctions.Middlewares.Commander</AssemblyName>
+		<Authors>iwate</Authors>
+		<PackageProjectUrl>https://github.com/iwate/commander</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/iwate/commander</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<Description>A command queuing library for Azure Functions</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Iwate.AzureFunctions.Middlewares.Singleton" Version="1.0.0-preview.4" />
+		<PackageReference Include="Iwate.Commander" Version="1.0.0-preview5" />
+		<PackageReference Include="Microsoft.Azure.Functions.Worker.Core" Version="1.8.*" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="7.0.*" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.*" />
+	</ItemGroup>
+
+</Project>
